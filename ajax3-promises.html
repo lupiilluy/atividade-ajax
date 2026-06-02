@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AJAX com Promises</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { font-size: 1.4rem; color: #333; }
+        .badge {
+            display: inline-block;
+            background: #fd7e14;
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 16px;
+        }
+        input {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background: #fd7e14;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 8px 0;
+        }
+        button:hover { background: #e96b00; }
+        #status {
+            font-size: 0.85rem;
+            margin-top: 8px;
+            min-height: 20px;
+            color: #555;
+        }
+        #status.erro { color: #dc3545; }
+        #status.ok { color: #28a745; }
+    </style>
+</head>
+<body>
+<div id="demo">
+    <h1>Consulta de CEP</h1>
+    <span class="badge">Promises</span>
+
+    <input type="text" name="cep" id="cep" placeholder="Digite seu CEP (ex: 01001000)">
+    <button type="button" onclick="loadDoc()">Pesquisar CEP</button>
+    <div id="status"></div>
+    <br>
+    <input type="text" id="cep-retorno" placeholder="CEP" readonly>
+    <input type="text" id="logradouro" placeholder="Logradouro" readonly>
+    <input type="text" id="complemento" placeholder="Complemento" readonly>
+    <input type="text" id="bairro" placeholder="Bairro" readonly>
+    <input type="text" id="localidade" placeholder="Cidade" readonly>
+    <input type="text" id="uf" placeholder="UF" readonly>
+</div>
+
+<script>
+/*
+ * Implementação com Promises (encapsulando XMLHttpRequest)
+ *
+ * Aqui encapsulamos o XMLHttpRequest dentro de uma Promise.
+ * Isso demonstra como Promises funcionam por baixo dos panos:
+ * - resolve() é chamado quando a operação tem sucesso
+ * - reject() é chamado quando ocorre um erro
+ *
+ * Essa abordagem é didática para entender a relação entre
+ * callbacks tradicionais e o modelo de Promises.
+ */
+
+/**
+ * Função que encapsula uma requisição XHR em uma Promise.
+ * @param {string} url - URL a ser consultada
+ * @returns {Promise} - Promise que resolve com os dados JSON ou rejeita com erro
+ */
+function fazerRequisicao(url) {
+    return new Promise(function(resolve, reject) {
+        var xhttp = new XMLHttpRequest();
+
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4) {
+                if (this.status == 200) {
+                    // Sucesso: resolvemos a Promise com os dados
+                    try {
+                        var dados = JSON.parse(this.responseText);
+                        resolve(dados);
+                    } catch (e) {
+                        reject(new Error("Erro ao interpretar resposta JSON"));
+                    }
+                } else {
+                    // Falha: rejeitamos a Promise com uma mensagem de erro
+                    reject(new Error("Erro HTTP: " + this.status));
+                }
+            }
+        };
+
+        xhttp.onerror = function() {
+            reject(new Error("Erro de rede"));
+        };
+
+        xhttp.open("GET", url, true);
+        xhttp.send();
+    });
+}
+
+function loadDoc() {
+    const cep = document.getElementById("cep").value.replace(/\D/g, "");
+    const statusEl = document.getElementById("status");
+
+    if (cep.length !== 8) {
+        statusEl.textContent = "⚠️ Digite um CEP válido com 8 dígitos.";
+        statusEl.className = "erro";
+        return;
+    }
+
+    statusEl.textContent = "🔍 Buscando...";
+    statusEl.className = "";
+
+    // Chamamos nossa função que retorna uma Promise
+    fazerRequisicao("https://viacep.com.br/ws/" + cep + "/json")
+        .then(function(endereco) {
+            if (endereco.erro) {
+                throw new Error("CEP não encontrado.");
+            }
+
+            console.log("Endereço recebido via Promise:", endereco);
+
+            document.getElementById("cep-retorno").value = endereco.cep || "";
+            document.getElementById("logradouro").value = endereco.logradouro || "";
+            document.getElementById("complemento").value = endereco.complemento || "";
+            document.getElementById("bairro").value = endereco.bairro || "";
+            document.getElementById("localidade").value = endereco.localidade || "";
+            document.getElementById("uf").value = endereco.uf || "";
+
+            statusEl.textContent = "✅ Endereço encontrado!";
+            statusEl.className = "ok";
+        })
+        .catch(function(error) {
+            console.error("Erro:", error);
+            statusEl.textContent = "❌ " + error.message;
+            statusEl.className = "erro";
+        });
+}
+</script>
+</body>
+</html>

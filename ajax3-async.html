@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AJAX com Async/Await</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { font-size: 1.4rem; color: #333; }
+        .badge {
+            display: inline-block;
+            background: #6f42c1;
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 16px;
+        }
+        input {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background: #6f42c1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 8px 0;
+        }
+        button:hover { background: #59329a; }
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+        #status {
+            font-size: 0.85rem;
+            margin-top: 8px;
+            min-height: 20px;
+            color: #555;
+        }
+        #status.erro { color: #dc3545; }
+        #status.ok { color: #28a745; }
+    </style>
+</head>
+<body>
+<div id="demo">
+    <h1>Consulta de CEP</h1>
+    <span class="badge">Async / Await</span>
+
+    <input type="text" name="cep" id="cep" placeholder="Digite seu CEP (ex: 01001000)">
+    <button type="button" id="btn" onclick="loadDoc()">Pesquisar CEP</button>
+    <div id="status"></div>
+    <br>
+    <input type="text" id="cep-retorno" placeholder="CEP" readonly>
+    <input type="text" id="logradouro" placeholder="Logradouro" readonly>
+    <input type="text" id="complemento" placeholder="Complemento" readonly>
+    <input type="text" id="bairro" placeholder="Bairro" readonly>
+    <input type="text" id="localidade" placeholder="Cidade" readonly>
+    <input type="text" id="uf" placeholder="UF" readonly>
+</div>
+
+<script>
+/*
+ * Implementação com Async/Await
+ *
+ * Async/Await é a forma mais moderna e legível de escrever código assíncrono.
+ * A palavra-chave "async" marca a função como assíncrona (ela retorna uma Promise).
+ * A palavra-chave "await" pausa a execução da função até a Promise ser resolvida.
+ *
+ * O resultado é um código que parece síncrono, mas não bloqueia o navegador.
+ * O tratamento de erros usa o familiar try/catch, igual ao código síncrono comum.
+ *
+ * Compare com o XHR original: o código aqui é muito mais curto, claro e fácil de ler.
+ */
+
+async function loadDoc() {
+    const cep = document.getElementById("cep").value.replace(/\D/g, "");
+    const statusEl = document.getElementById("status");
+    const btn = document.getElementById("btn");
+
+    if (cep.length !== 8) {
+        statusEl.textContent = "⚠️ Digite um CEP válido com 8 dígitos.";
+        statusEl.className = "erro";
+        return;
+    }
+
+    // Desabilita o botão durante a busca para evitar cliques duplos
+    btn.disabled = true;
+    statusEl.textContent = "🔍 Buscando...";
+    statusEl.className = "";
+
+    try {
+        // "await" pausa aqui até o fetch() retornar a resposta
+        const response = await fetch("https://viacep.com.br/ws/" + cep + "/json");
+
+        // Verificamos se a resposta foi bem-sucedida
+        if (!response.ok) {
+            throw new Error("Erro HTTP: " + response.status);
+        }
+
+        // "await" pausa aqui até a conversão para JSON terminar
+        const endereco = await response.json();
+
+        // Verifica se a API retornou erro (CEP inválido)
+        if (endereco.erro) {
+            throw new Error("CEP não encontrado.");
+        }
+
+        console.log("Endereço recebido via Async/Await:", endereco);
+
+        // Preenche os campos com os dados recebidos
+        document.getElementById("cep-retorno").value = endereco.cep || "";
+        document.getElementById("logradouro").value = endereco.logradouro || "";
+        document.getElementById("complemento").value = endereco.complemento || "";
+        document.getElementById("bairro").value = endereco.bairro || "";
+        document.getElementById("localidade").value = endereco.localidade || "";
+        document.getElementById("uf").value = endereco.uf || "";
+
+        statusEl.textContent = "✅ Endereço encontrado!";
+        statusEl.className = "ok";
+
+    } catch (error) {
+        // try/catch captura qualquer erro ocorrido no bloco acima
+        console.error("Erro na requisição:", error);
+        statusEl.textContent = "❌ " + error.message;
+        statusEl.className = "erro";
+
+    } finally {
+        // "finally" sempre executa, com sucesso ou erro
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>

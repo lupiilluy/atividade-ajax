@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AJAX com Fetch API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { font-size: 1.4rem; color: #333; }
+        .badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 16px;
+        }
+        input {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 8px 0;
+        }
+        button:hover { background: #1e7e34; }
+        #status {
+            font-size: 0.85rem;
+            margin-top: 8px;
+            min-height: 20px;
+            color: #555;
+        }
+        #status.erro { color: #dc3545; }
+        #status.ok { color: #28a745; }
+    </style>
+</head>
+<body>
+<div id="demo">
+    <h1>Consulta de CEP</h1>
+    <span class="badge">Fetch API</span>
+
+    <input type="text" name="cep" id="cep" placeholder="Digite seu CEP (ex: 01001000)">
+    <button type="button" onclick="loadDoc()">Pesquisar CEP</button>
+    <div id="status"></div>
+    <br>
+    <input type="text" id="cep-retorno" placeholder="CEP" readonly>
+    <input type="text" id="logradouro" placeholder="Logradouro" readonly>
+    <input type="text" id="complemento" placeholder="Complemento" readonly>
+    <input type="text" id="bairro" placeholder="Bairro" readonly>
+    <input type="text" id="localidade" placeholder="Cidade" readonly>
+    <input type="text" id="uf" placeholder="UF" readonly>
+</div>
+
+<script>
+/*
+ * Implementação com Fetch API
+ *
+ * A Fetch API retorna uma Promise, permitindo usar .then() para
+ * encadear operações. O primeiro .then() converte a resposta para JSON,
+ * e o segundo utiliza os dados recebidos. Erros são tratados com .catch().
+ *
+ * Diferença do XHR: não precisamos criar um objeto, definir callbacks
+ * de estado nem chamar .open() e .send() separadamente.
+ */
+
+function loadDoc() {
+    const cep = document.getElementById("cep").value.replace(/\D/g, ""); // remove não-numéricos
+    const statusEl = document.getElementById("status");
+
+    if (cep.length !== 8) {
+        statusEl.textContent = "⚠️ Digite um CEP válido com 8 dígitos.";
+        statusEl.className = "erro";
+        return;
+    }
+
+    statusEl.textContent = "🔍 Buscando...";
+    statusEl.className = "";
+
+    // fetch() retorna uma Promise que resolve com o objeto Response
+    fetch("https://viacep.com.br/ws/" + cep + "/json")
+        .then(function(response) {
+            // Verificamos se a resposta HTTP foi bem-sucedida
+            // (fetch NÃO rejeita a promise em erros 404/500 automaticamente)
+            if (!response.ok) {
+                throw new Error("Erro HTTP: " + response.status);
+            }
+            // .json() também retorna uma Promise — por isso encadeamos outro .then()
+            return response.json();
+        })
+        .then(function(endereco) {
+            // Aqui temos os dados do endereço como objeto JavaScript
+            if (endereco.erro) {
+                throw new Error("CEP não encontrado.");
+            }
+
+            console.log("Endereço recebido via Fetch:", endereco);
+
+            document.getElementById("cep-retorno").value = endereco.cep || "";
+            document.getElementById("logradouro").value = endereco.logradouro || "";
+            document.getElementById("complemento").value = endereco.complemento || "";
+            document.getElementById("bairro").value = endereco.bairro || "";
+            document.getElementById("localidade").value = endereco.localidade || "";
+            document.getElementById("uf").value = endereco.uf || "";
+
+            statusEl.textContent = "✅ Endereço encontrado!";
+            statusEl.className = "ok";
+        })
+        .catch(function(error) {
+            // .catch() captura qualquer erro no encadeamento acima
+            console.error("Erro na requisição Fetch:", error);
+            statusEl.textContent = "❌ " + error.message;
+            statusEl.className = "erro";
+        });
+}
+</script>
+</body>
+</html>
